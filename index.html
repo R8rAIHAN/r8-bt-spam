@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>R8 BT-SPAM - R8rAIHAN</title>
+    
+    <!-- PWA Meta -->
+    <meta name="theme-color" content="#ff006e">
+    <meta name="description" content="R8rAIHAN Bluetooth Pairing Spam Tool">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔥</text></svg>">
+    
+    <style>
+        /* আগের CSS same থাকবে - copy from previous code */
+        * {margin:0;padding:0;box-sizing:border-box;}
+        body {font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#ff006e,#8338ec,#3a86ff);min-height:100vh;display:flex;justify-content:center;align-items:center;color:white;}
+        .app-container {background:rgba(0,0,0,0.9);padding:30px;border-radius:20px;box-shadow:0 20px 40px rgba(0,0,0,0.5);text-align:center;max-width:400px;width:90%;}
+        .logo {font-size:2.5em;font-weight:bold;background:linear-gradient(45deg,#ff006e,#ffcc02);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:10px;text-shadow:0 0 20px rgba(255,0,110,0.5);}
+        .owner {font-size:1.1em;opacity:0.9;color:#ffcc02;}
+        input[type="number"],button{width:100%;padding:15px;margin:10px 0;border:none;border-radius:10px;font-size:1.1em;transition:all 0.3s;}
+        input[type="number"]{background:rgba(255,255,255,0.1);color:white;border:2px solid rgba(255,255,255,0.3);}
+        input[type="number"]::placeholder{color:rgba(255,255,255,0.6);}
+        button{background:linear-gradient(45deg,#ff006e,#8338ec);color:white;font-weight:bold;cursor:pointer;box-shadow:0 10px 20px rgba(0,0,0,0.3);}
+        button:hover{transform:translateY(-2px);box-shadow:0 15px 30px rgba(0,0,0,0.4);}
+        button:disabled{background:#666;cursor:not-allowed;transform:none;}
+        .status{margin:20px 0;padding:15px;border-radius:10px;font-weight:bold;}
+        .status.running{background:rgba(0,255,0,0.2);border:2px solid #00ff00;}
+        .status.stopped{background:rgba(255,255,255,0.1);border:2px solid rgba(255,255,255,0.3);}
+        .log{background:rgba(0,0,0,0.5);border-radius:10px;padding:15px;height:200px;overflow-y:auto;text-align:left;font-family:monospace;font-size:0.9em;margin-top:20px;}
+        .log-entry{margin:5px 0;padding:5px;border-radius:5px;background:rgba(255,255,255,0.05);}
+        .success{color:#00ff00;}
+        .warning{background:rgba(255,165,0,0.2);border-color:#ffaa00;color:#ffaa00;}
+        .pwa-install{display:none;background:#00ff88;color:black;padding:10px;border-radius:10px;margin:10px 0;font-weight:bold;}
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <div class="header">
+            <div class="logo">R8 BT-SPAM</div>
+            <div class="owner">App Owner: R8rAIHAN</div>
+            <div id="pwaInstall" class="pwa-install">📱 PWA ইনস্টল করুন!</div>
+        </div>
+        
+        <div class="warning status">
+            ✅ HTTPS সক্রিয় | Chrome ব্যবহার করুন | Bluetooth ON রাখুন
+        </div>
+        
+        <div class="controls">
+            <input type="number" id="spamCount" placeholder="Spam গণনা (999)" min="1" max="9999" value="999">
+            <input type="number" id="delay" placeholder="দেরি (ms) (100)" min="50" max="5000" value="100">
+            <button id="startBtn">🚀 SPAM শুরু</button>
+            <button id="stopBtn" disabled>⏹️ বন্ধ</button>
+        </div>
+        
+        <div id="status" class="status stopped">তৈরি। Start চাপুন!</div>
+        <div id="log" class="log">R8 BT-SPAM HTTPS Ready!\nR8rAIHAN দ্বারা তৈরি 🔥</div>
+    </div>
+
+    <script>
+        // Service Worker Registration (PWA)
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js');
+        }
+
+        class R8BTSpam {
+            constructor() {
+                this.isRunning = false;
+                this.init();
+            }
+            
+            init() {
+                this.logElement = document.getElementById('log');
+                this.statusElement = document.getElementById('status');
+                this.startBtn = document.getElementById('startBtn');
+                this.stopBtn = document.getElementById('stopBtn');
+                
+                this.startBtn.onclick = () => this.startSpam();
+                this.stopBtn.onclick = () => this.stopSpam();
+                
+                this.log('✅ HTTPS GitHub Pages সক্রিয়');
+                this.log('🔥 R8 BT-SPAM by R8rAIHAN');
+                
+                // PWA Install Prompt
+                window.addEventListener('beforeinstallprompt', (e) => {
+                    e.preventDefault();
+                    document.getElementById('pwaInstall').style.display = 'block';
+                    document.getElementById('pwaInstall').onclick = () => e.prompt();
+                });
+            }
+            
+            log(message) {
+                const timestamp = new Date().toLocaleTimeString('bn-BD');
+                const entry = document.createElement('div');
+                entry.className = 'log-entry success';
+                entry.textContent = `[${timestamp}] ${message}`;
+                this.logElement.appendChild(entry);
+                this.logElement.scrollTop = this.logElement.scrollHeight;
+            }
+            
+            async startSpam() {
+                this.spamCount = 0;
+                this.maxSpam = parseInt(document.getElementById('spamCount').value) || 999;
+                this.delay = parseInt(document.getElementById('delay').value) || 100;
+                
+                if (this.isRunning) return;
+                
+                this.isRunning = true;
+                this.startBtn.disabled = true;
+                this.stopBtn.disabled = false;
+                this.statusElement.textContent = `🚀 চলছে... (${this.spamCount}/${this.maxSpam})`;
+                this.statusElement.className = 'status running';
+                
+                this.log(`🚀 শুরু: ${this.maxSpam} req, ${this.delay}ms delay`);
+                
+                for (let i = 0; i < this.maxSpam && this.isRunning; i++) {
+                    await this.bluetoothSpam();
+                    this.spamCount++;
+                    this.statusElement.textContent = `🚀 চলছে... (${this.spamCount}/${this.maxSpam})`;
+                    await this.sleep(this.delay);
+                }
+                this.stopSpam();
+            }
+            
+            stopSpam() {
+                this.isRunning = false;
+                this.startBtn.disabled = false;
+                this.stopBtn.disabled = true;
+                this.statusElement.textContent = `✅ সম্পন্ন: ${this.spamCount} requests`;
+                this.statusElement.className = 'status stopped';
+            }
+            
+            async bluetoothSpam() {
+                const spamRequests = [
+                    navigator.bluetooth.requestDevice({filters: [{services: ['battery_service']}] }),
+                    navigator.bluetooth.requestDevice({filters: [{services: ['heart_rate']}] }),
+                    navigator.bluetooth.requestDevice({acceptAllDevices: true}),
+                    navigator.bluetooth.getAvailability()
+                ];
+                
+                await Promise.allSettled(spamRequests);
+                this.log(`📡 Request #${this.spamCount + 1} OK`);
+            }
+            
+            sleep(ms) { return new Promise(r=>setTimeout(r,ms)); }
+        }
+        
+        new R8BTSpam();
+    </script>
+</body>
+  </html>
